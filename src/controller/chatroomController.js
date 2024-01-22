@@ -4,7 +4,12 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { chatroom, friendrequest, user } = require('../models'); // Update with your actual model paths
+const http = require('http');
+const WebSocket = require('ws');
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+const { chatroom, invitechat, user, friendrequest, message } = require('../models'); // Update with your actual model paths
 
 
 
@@ -40,7 +45,7 @@ exports.createChatRoom = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 500, error: message.error });
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
 
@@ -49,7 +54,7 @@ exports.createChatRoom = async (req, res) => {
 
 
 /// Invite other people to join a chat room with userId and password
-exports.invitePMChatRoom = async (req, res) => {
+exports.inviteMemberChatRoom = async (req, res) => {
     try {
         let inviteuserId = req.body.userId
         let userId = req.id
@@ -73,7 +78,7 @@ exports.invitePMChatRoom = async (req, res) => {
         }
 
         // Save the password in the database
-        let sendRequest = await friendrequest.create({ chatroomId: chatRoomId, password: password, userId: inviteuserId });
+        let sendRequest = await invitechat.create({ chatroomId: chatRoomId, password: password, userId: inviteuserId });
 
         // Return success response with invite to join the chat room
         return res.status(200).json({
@@ -85,7 +90,7 @@ exports.invitePMChatRoom = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 500, error: message.error });
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
 
@@ -99,7 +104,7 @@ exports.joinChatRoom = async (req, res) => {
         let { chatroomId, password } = data;
 
         // Find the chat room by userId
-        const checkJoinUser = await friendrequest.findOne({
+        const checkJoinUser = await invitechat.findOne({
             where: { chatroomId: chatroomId, password: password }
         });
 
@@ -124,20 +129,17 @@ exports.joinChatRoom = async (req, res) => {
                     { capacity: chatRoomCapacity.capacity - 1 },
                     { where: { id: checkJoinUser.chatroomId } }
                 );
-                //update friendRequests
-                await friendrequest.update(
-                    { status: "accepted" },
-                    { where: { userId: userId, chatroomId: checkJoinUser.chatroomId } }
-                );
+                //update invitechats
+
             } else {
                 return res.status(400).json({ status: 400, message: "Chat room capacity exceeded." });
             }
         } else {
             // If the user is a non-prime member, check their login history
-            let checkNonPrimeUser = await friendrequest.findOne({
+            let checkNonPrimeUser = await invitechat.findOne({
                 where: {
                     userId: userId,
-                    status: 'accepted'
+                    status: 'join'
                 }
             });
 
@@ -149,11 +151,7 @@ exports.joinChatRoom = async (req, res) => {
                         { capacity: chatRoomCapacity.capacity - 1 },
                         { where: { id: checkJoinUser.chatroomId } }
                     );
-                    //update friendRequests
-                    await friendrequest.update(
-                        { status: "accepted" },
-                        { where: { userId: userId, chatroomId: checkJoinUser.chatroomId } }
-                    );
+
                 } else {
                     return res.status(400).json({ status: 400, message: "Chat room capacity exceeded." });
                 }
@@ -177,7 +175,7 @@ exports.joinChatNonPrimeMember = async (req, res) => {
         let { chatroomId, password } = data;
 
         // Find the chat room by userId
-        const checkJoinUser = await friendrequest.findOne({
+        const checkJoinUser = await invitechat.findOne({
             where: { chatroomId: chatroomId, password: password }
         });
 
@@ -203,20 +201,16 @@ exports.joinChatNonPrimeMember = async (req, res) => {
                     { where: { id: checkJoinUser.chatroomId } }
                 );
 
-                //update friendRequests
-                await friendrequest.update(
-                    { status: "accepted" },
-                    { where: { userId: userId, chatroomId: checkJoinUser.chatroomId } }
-                );
+
             } else {
                 return res.status(400).json({ status: 400, message: "Chat room capacity exceeded." });
             }
         } else {
             // If the user is a non-prime member, check their login history and available coins
-            let checkNonPrimeUser = await friendrequest.findOne({
+            let checkNonPrimeUser = await invitechat.findOne({
                 where: {
                     userId: userId,
-                    status: 'accepted'
+                    status: 'join'
                 }
             });
 
@@ -238,11 +232,7 @@ exports.joinChatNonPrimeMember = async (req, res) => {
                             { where: { id: userId } }
                         );
 
-                        //update friendRequests
-                        await friendrequest.update(
-                            { status: "accepted" },
-                            { where: { userId: userId, chatroomId: checkJoinUser.chatroomId } }
-                        );
+
 
                         res.status(200).json({ status: 200, message: 'Successfully joined the chat room.' });
                     } else {
@@ -264,3 +254,97 @@ exports.joinChatNonPrimeMember = async (req, res) => {
 
 
 
+// WebSocket endpoint for real-time messages
+wss.on('connection', (ws) => {
+    ws.on('message', async (message) => {
+        try {
+            // Parse the JSON message
+            const data = JSON.parse(message);
+
+            // Save the message to the database
+            const savedMessage = await message.create({
+                content: data.content,
+                userId: data.userId,
+                chatroomId: data.chatRoomId,
+            });
+
+            // Broadcast the message to all connected clients
+            wss.clients.forEach((client) => {
+                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(savedMessage));
+                }
+            });
+
+        } catch (error) {
+            console.error(error);
+        }
+    });
+});
+
+
+
+
+
+
+
+
+
+//send friend reques to other user
+exports.send_Friend_request = async (req, res) => {
+    try {
+
+        let userId = req.id;
+        let { friendUserId } = req.body;
+
+        console.log("userId ===> ", userId);
+        // check user is prime or not
+
+        let sendRequest = await friendrequest.create({
+            senderRequest: userId,
+            receiverRequest: friendUserId
+
+        })
+
+        // Return success response with created chat room data
+        return res.json({
+            status: 200,
+            message: 'Friend request sent Successfully',
+            data: sendRequest
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: error.message });
+    }
+};
+
+
+
+////send friend reques to other user
+exports.accepte_reject_request = async (req, res) => {
+    try {
+
+        let userId = req.id;
+        let { status, requestId } = req.body;
+
+
+        console.log("userId ===> ", userId);
+        // check user is prime or not
+
+        let statusofreq = await friendrequest.update({
+            status: status
+        }, { where: { id: requestId } }
+        )
+
+        // Return success response with created chat room data
+        return res.json({
+            status: 200,
+            message: `Friend request ${status} Successfully`,
+
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: error.message });
+    }
+};

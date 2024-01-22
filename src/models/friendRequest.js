@@ -9,10 +9,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
             defaultValue: 'pending',
         },
-        password: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
+
     },
         {
             paranoid: true,
@@ -25,14 +22,20 @@ module.exports = (sequelize, DataTypes) => {
     FriendRequest.associate = (models) => {
 
 
-        FriendRequest.belongsTo(models.chatroom, {
-            foreignKey: {
-                allowNull: false,
-            },
-        });
+
         FriendRequest.belongsTo(models.user, {
             foreignKey: {
                 allowNull: false,
+                name: 'senderRequest',
+
+            },
+        });
+
+        FriendRequest.belongsTo(models.user, {
+            foreignKey: {
+                allowNull: false,
+                name: 'receiverRequest',
+
             },
         });
 

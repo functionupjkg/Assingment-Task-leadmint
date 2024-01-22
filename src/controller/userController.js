@@ -14,7 +14,8 @@ exports.userRegistration = async (req, res) => {
             phone,
             password,
             deviceId,
-            availCoins
+            availCoins,
+            isPrimeMember,
             // Add other registration details here
         } = req.body;
 
@@ -36,7 +37,8 @@ exports.userRegistration = async (req, res) => {
             phone,
             password: hashedPassword,
             deviceId,
-            availCoins
+            availCoins,
+            isPrimeMember,
             // Add other registration details here
         });
 
@@ -44,7 +46,7 @@ exports.userRegistration = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 500, error: message.error });
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
 
@@ -88,7 +90,7 @@ exports.userLogin = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: message.error });
+        res.status(500).json({ error: error.message });
     }
 }
 
@@ -113,7 +115,7 @@ exports.viewUserProfile = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 500, error: message.error });
+        return res.status(500).json({ status: 500, error: error.message });
     }
 };
 

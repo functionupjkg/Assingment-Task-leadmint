@@ -47,10 +47,31 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
             },
         });
-        User.hasMany(models.friendrequest, {
+        User.hasMany(models.invitechat, {
             foreignKey: {
                 allowNull: false,
             },
+        });
+
+        User.hasMany(models.friendrequest, {
+            foreignKey: {
+                allowNull: false,
+                name: 'senderRequest',
+            },
+        });
+        User.hasMany(models.friendrequest, {
+            foreignKey: {
+                allowNull: false,
+                name: 'receiverRequest',
+            },
+        });
+        User.hasMany(models.message, {
+            foreignKey: {
+                allowNull: false,
+            },
+        });
+        User.belongsToMany(models.chatroom, {
+            through: 'userchatroom'
         });
     };
 

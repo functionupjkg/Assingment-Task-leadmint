@@ -36,13 +36,24 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
             },
         });
+        ChatRoom.belongsToMany(models.user, {
+            through: 'userchatroom'
+        });
     }
     ChatRoom.associate = (models) => {
-        ChatRoom.hasMany(models.friendrequest, {
+        ChatRoom.hasMany(models.invitechat, {
             foreignKey: {
                 allowNull: false,
             },
         });
+
+        ChatRoom.hasMany(models.message, {
+            foreignKey: {
+                allowNull: false,
+            },
+        });
+
+
     };
 
     return ChatRoom;

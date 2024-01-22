@@ -1,15 +1,18 @@
 module.exports = (sequelize, DataTypes) => {
-    const Message = sequelize.define("message", {
+    const InviteChat = sequelize.define("invitechat", {
         id: {
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
         },
-        content: {
-            type: DataTypes.TEXT,
-            allowNull: false,
+        status: {
+            type: DataTypes.STRING,
+            defaultValue: 'join',
         },
-
+        password: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
     },
         {
             paranoid: true,
@@ -19,23 +22,23 @@ module.exports = (sequelize, DataTypes) => {
         },
     );
 
-    Message.associate = (models) => {
+    InviteChat.associate = (models) => {
 
-        Message.belongsTo(models.user, {
+
+        InviteChat.belongsTo(models.chatroom, {
+            foreignKey: {
+                allowNull: false,
+            },
+        });
+        InviteChat.belongsTo(models.user, {
             foreignKey: {
                 allowNull: false,
             },
         });
 
-        Message.belongsTo(models.chatroom, {
-            foreignKey: {
-                allowNull: false,
-            },
-        });
 
     };
 
 
-
-    return Message;
+    return InviteChat;
 };
