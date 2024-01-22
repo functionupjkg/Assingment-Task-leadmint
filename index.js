@@ -45,15 +45,10 @@ app.use("/api", userRoutes);
 
 
 
-// ========== authorisation routes only for checking ========== //
-
-// admin auth routes //
-
-// const adminAuth = require("./src/routes/admin/adminAuth");
 
 const { truncate } = require("fs/promises");
 
-// app.use("/api/admin/", adminAuth);
+
 
 global.__basedir = __dirname;
 
